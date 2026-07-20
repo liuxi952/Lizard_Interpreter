@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="Lizard/Lizard.vcxproj" Id="ea9c44d3-7261-4e1d-966e-099bd4c51534" />
+</Solution>
