@@ -15,6 +15,12 @@
 
 using namespace std;
 
+struct Operator_uct
+{
+    string num;
+    char ch;
+};
+
 struct two_variables_int
 {
     string name;
@@ -37,6 +43,18 @@ struct two_variables_float
 {
     string name;
     float value;
+};
+
+struct two_variables_bool
+{
+    string name;
+    bool value;
+};
+
+struct two_variables_string
+{
+    string name;
+    string value;
 };
 
 // 读取文件内容
@@ -104,7 +122,7 @@ vector<string> split_two(const string& str, const vector<char>& delimiters)
     return result;
 }
 
-//转为c++代码
+// 转为c++代码
 vector<string> transform_c(const vector<vector<string>>& files_split)
 {
     vector<string> c;
@@ -129,11 +147,143 @@ vector<string> transform_c(const vector<vector<string>>& files_split)
 
 
 // 操作符分割
-vector<string> Operator(const string& str)
+vector<Operator_uct> Operator(const string& str)
 {
-    vector<char> chs = { '+','-','*','/' };
-    vector<string> strs = split_two(str, chs);
-    return strs;
+    vector<Operator_uct> result;
+    string num;
+
+    for (char c : str)
+    {
+        if (isdigit(c)) {
+            num.push_back(c);  // 累积数字
+        }
+        else if (c == '+' || c == '-' || c == '*' || c == '/') {
+            if (!num.empty()) {
+                result.push_back({ num, c });
+                num.clear();
+            }
+        }
+    }
+
+    // 最后一个数字（可能没有跟运算符）
+    if (!num.empty()) {
+        result.push_back({ num, '\0' }); // '\0' 表示没有运算符
+    }
+
+    return result;
+}
+
+// 处理加减乘除（运算符）
+int evalExpression(const string& expr, int& pos) 
+{
+    vector<int> values;
+    vector<char> ops;
+
+    auto applyOp = [&](char op) 
+        {
+        int b = values.back(); values.pop_back();
+        int a = values.back(); values.pop_back();
+        switch (op) {
+        case '+': values.push_back(a + b); break;
+        case '-': values.push_back(a - b); break;
+        case '*': values.push_back(a * b); break;
+        case '/':
+            if (b == 0) 
+            {
+                cout << "[Error] Division by zero" << endl;
+                values.push_back(0);
+            }
+            else 
+            {
+                values.push_back(a / b);
+            }
+            break;
+        }
+        };
+
+    auto precedence = [&](char op) 
+        {
+        if (op == '+' || op == '-') return 1;
+        if (op == '*' || op == '/') return 2;
+        return 0;
+        };
+
+    while (pos < expr.size()) {
+        char c = expr[pos];
+
+        if (isdigit(c)) 
+        {
+            int val = 0;
+            while (pos < expr.size() && isdigit(expr[pos])) 
+            {
+                val = val * 10 + (expr[pos] - '0');
+                pos++;
+            }
+            values.push_back(val);
+            continue;
+        }
+        else if (c == '(') 
+        {
+            pos++;
+            int val = evalExpression(expr, pos);
+            values.push_back(val);
+        }
+        else if (c == ')') 
+        {
+            pos++;
+            break;
+        }
+        else if (c == '+' || c == '-' || c == '*' || c == '/') 
+        {
+            while (!ops.empty() && precedence(ops.back()) >= precedence(c)) 
+            {
+                applyOp(ops.back());
+                ops.pop_back();
+            }
+            ops.push_back(c);
+            pos++;
+        }
+        else 
+        {
+            pos++;
+        }
+    }
+
+    while (!ops.empty()) 
+    {
+        applyOp(ops.back());
+        ops.pop_back();
+    }
+
+    return values.back();
+}
+
+// 判断是不是表达式
+bool judgment_Operator(string varName) 
+{
+    bool found = true;
+    if (!(varName[0] >= '0' && varName[0] <= '9'))
+    {
+        found = false;
+    }
+    for (int j = 0;j < varName.size();j++)
+    {
+        if (!found) break;
+        char ch = varName[j];
+        if (ch != '*' && ch != '//' && ch != '+' && ch != '-' && !(ch >= '0' && ch <= '9'))
+        {
+            found = false;
+            break;
+        }
+    }
+    return found;
+}
+
+// 将string转为bool
+bool stob(string str) 
+{
+    if (str == "true") return true;
+    else return false;
 }
 
 // 清空输入缓冲区
@@ -180,6 +330,8 @@ int main(int argc, char* argv[])
     vector<two_variables_long> variable_long;
     vector<two_variables_double> variable_double;
     vector<two_variables_float> variable_float;
+    vector<two_variables_bool> variable_bool;
+    vector<two_variables_string> variable_string;
 
     // 按空格拆分每一行
     vector<vector<string>> files_split(files.size());
@@ -258,7 +410,7 @@ import.push_back(str2);
             //...
             //还有很多
         }
-        else if (str == "int" || str == "long" || str == "double" || str == "float")
+        else if (str == "int" || str == "long" || str == "double" || str == "float" || str == "bool" || str == "string")
         {
             string str2 = Analysis[1];
             string str3 = "0";
@@ -281,7 +433,36 @@ import.push_back(str2);
             {
                 variable_float.push_back({ str2, stof(str3) });
             }
+            else if (str == "bool")
+            {
+                variable_bool.push_back({ str2, stob(str3) });
+            }
+            else if (str == "string")
+            {
+                string str4 = str3.substr(1, str3.size() - 2);
+                variable_string.push_back({ str2, str4 });
+                variable_string.push_back({ str2, str4 });
+            }
+        }
+        else if (str == "if") {
+            string condition = Analysis[1];
+            int pos = 0;
+            bool condValue = evalExpression(condition, pos) != 0; // 非零为真
 
+            if (condValue) {
+                // 执行 if 后面的语句
+                string action = Analysis[2]; // 比如 print
+                string arg = Analysis[3];
+                operate.push_back(action + " " + arg);
+            }
+            else {
+                // 查找 else
+                if (Analysis.size() > 4 && Analysis[4] == "else") {
+                    string action = Analysis[5];
+                    string arg = Analysis[6];
+                    operate.push_back(action + " " + arg);
+                }
+            }
         }
         else {
             cout << "line:" << i << "[Error] No function.(" << str << ")" << endl;
@@ -346,8 +527,29 @@ import.push_back(str2);
                 }
             }
 
+            for (auto& v : variable_string)
+            {
+                if (v.name == varName)
+                {
+                    cout << v.value << endl;
+                    found = true;
+                    break;
+                }
+            }
+
+            for (auto& v : variable_bool)
+            {
+                if (v.name == varName)
+                {
+                    cout << v.value << endl;
+                    found = true;
+                    break;
+                }
+            }
+
             if (!found)
             {
+                bool found1 = true;
                 if (varName[0] == '"' || varName == "endl")
                 {
                     if (varName == "endl")
@@ -360,6 +562,12 @@ import.push_back(str2);
                         cout << varName.substr(1, varName.size() - 2) << endl;
                     }
                 }
+                else if (found1)
+                {
+                    int pos = 0;
+                    int num = evalExpression(varName, pos);
+                    cout << num;
+                }
                 else
                 {
                     cout << "[Error] Undefined variable: " << varName << endl;
@@ -367,9 +575,13 @@ import.push_back(str2);
             }
 
         }
+        else if (values[0] == "if") 
+        {
+            //...
+        }
 
         //...
-
+        //这是解读，不要二次报错/警告
     }
 
     system("pause");

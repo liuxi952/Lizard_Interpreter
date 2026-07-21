@@ -1,7 +1,7 @@
 ﻿  Lizard.cpp
   正在生成代码
-  613 of 615 functions (99.7%) were compiled, the rest were copied from previous compilation.
-    255 functions were new in current compilation
-    0 functions had inline decision re-evaluated but remain unchanged
+  118 of 731 functions (16.1%) were compiled, the rest were copied from previous compilation.
+    92 functions were new in current compilation
+    149 functions had inline decision re-evaluated but remain unchanged
   已完成代码的生成
   Lizard.vcxproj -> C:\Users\Henry Liu\Desktop\My\Lizard\Lizard\x64\Release\Lizard.exe
