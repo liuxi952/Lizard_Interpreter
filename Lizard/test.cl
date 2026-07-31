@@ -1,1 +1,3 @@
-C:\Users\Henry Liu\Desktop\My\Lizard\test.cl
+int a = 1
+int b = 3
+print a + b

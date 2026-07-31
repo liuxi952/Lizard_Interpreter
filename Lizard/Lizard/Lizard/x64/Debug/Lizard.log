@@ -1,2 +1,1 @@
-﻿  Lizard.cpp
-  Lizard.vcxproj -> C:\Users\Administrator\Desktop\My\Lizard\Lizard\x64\Debug\Lizard.exe
+﻿C:\Program Files\Microsoft Visual Studio\18\Insiders\VC\Auxiliary\Build\Microsoft.VCToolsVersion.v145.default.props(37,5): error MSB4019: 找不到导入的项目“C:\Program Files\Microsoft Visual Studio\18\Insiders\VC\Auxiliary\Build\v145\Microsoft.VCToolsVersion.VC.14.51.props”。请确认 Import 声明“$(VCToolsVersionPath)”中计算结果为“C:\Program Files\Microsoft Visual Studio\18\Insiders\VC\Auxiliary\Build\v145\Microsoft.VCToolsVersion.VC.14.51.props”的表达式正确无误且该文件位于磁盘上。
