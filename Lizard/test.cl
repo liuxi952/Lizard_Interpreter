@@ -1,3 +1,3 @@
-int a = 1
-int b = 3
+int a = 123
+int b = 456
 print a + b

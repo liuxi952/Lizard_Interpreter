@@ -34,6 +34,7 @@ enum class OpCode
     PRINT,
     JZ,
     JMP,
+    RETURN,
     HALT
 };
 
@@ -162,7 +163,7 @@ vector<string> tokenizeExpression(const string& expr)
             current.clear();
             continue;
         }
-        if (isdigit(static_cast<unsigned char>(c)) || ((c == '+' || c == '-') && i + 1 < expr.size() && isdigit(static_cast<unsigned char>(expr[i + 1])) && (i == 0 || expr[i-1] == '(' || isOperatorToken(current))))
+        if (isdigit(static_cast<unsigned char>(c)) || ((c == '+' || c == '-') && i + 1 < expr.size() && isdigit(static_cast<unsigned char>(expr[i + 1])) && (i == 0 || expr[i - 1] == '(' || isOperatorToken(current))))
         {
             string number;
             number.push_back(c);
@@ -363,6 +364,17 @@ void compileStatement(const string& line, vector<Instruction>& bytecode)
         return;
     }
 
+    if (source.rfind("return", 0) == 0 && (source.size() == 6 || isspace(static_cast<unsigned char>(source[6]))))
+    {
+        string expr = trim(source.substr(6));
+        if (!expr.empty())
+        {
+            compileExpression(expr, bytecode);
+        }
+        bytecode.emplace_back(OpCode::RETURN);
+        return;
+    }
+
     if (source.rfind("print ", 0) == 0)
     {
         string arg = trim(source.substr(6));
@@ -458,6 +470,8 @@ struct VM
 {
     vector<Value> stack;
     unordered_map<string, Value> vars;
+    bool hasReturn = false;
+    Value returnValue;
 
     void push(const Value& v)
     {
@@ -605,6 +619,19 @@ struct VM
             case OpCode::JMP:
                 pc = static_cast<size_t>(ins.arg);
                 continue;
+            case OpCode::RETURN:
+            {
+                if (!stack.empty())
+                {
+                    returnValue = pop();
+                }
+                else
+                {
+                    returnValue = Value::fromInt(0);
+                }
+                hasReturn = true;
+                return;
+            }
             case OpCode::HALT:
                 return;
             }
@@ -663,12 +690,23 @@ int main(int argc, char* argv[])
     GetModuleFileNameA(NULL, exeFullPath, MAX_PATH);
     string exepath(exeFullPath);
 
-    runCommand("assoc .cl=LizardFile");
-    runCommand(string("ftype LizardFile=\"") + exepath + "\" \"%1\"");
+    // 在main开头参数判断位置插入
+    if (argc >= 2 && string(argv[1]) == "--register") {
+        char exeFullPath[MAX_PATH];
+        GetModuleFileNameA(NULL, exeFullPath, MAX_PATH);
+        string exepath(exeFullPath);
+        runCommand("assoc .cl=LizardFile");
+        string shell = "ftype LizardFile=\"" + exepath + "\" \"%1\"";
+        runCommand(shell);
+        return 0;
+    }
+
 
     string path(argv[1]);
     vector<string> lines = ReadFileFromPath(path);
     if (lines.empty()) return 0;
+
+    clock_t start = clock(); // 程序开始计时
 
     vector<Instruction> bytecode;
     for (const string& rawLine : lines)
@@ -682,6 +720,18 @@ int main(int argc, char* argv[])
     VM vm;
     vm.execute(bytecode);
 
-    system("pause");
-    return 0;
+    clock_t end = clock(); // 程序结束计时
+    double cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+    int exitValue = 0;
+    if (vm.hasReturn)
+    {
+        exitValue = static_cast<int>(vm.returnValue.asInt());
+    }
+
+    cout << "-------------------------------" << endl;
+    cout << "Process exited after " << cpu_time_used << " seconds with return value " << exitValue << endl;
+
+    system("pause"); //终止程序
+
+    return exitValue;
 }

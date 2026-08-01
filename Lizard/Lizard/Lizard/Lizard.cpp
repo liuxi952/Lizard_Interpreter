@@ -7,9 +7,11 @@
 #include <windows.h>
 #include <iostream>
 #include <fstream>
+#include <iomanip>
 #include <sstream>
 #include <vector>
 #include <string>
+#include <string_view>
 #include <limits>
 #include <unordered_map>
 
@@ -81,26 +83,32 @@ vector<string> ReadFileFromPath(const string& Path)
     return fileContent;
 }
 
-vector<string> split(const string& str, char delimiter)
+vector<string_view> split(const string_view& str, char delimiter)
 {
-    vector<string> result;
-    string token;
-    stringstream ss(str);
-    while (getline(ss, token, delimiter))
+    vector<string_view> result;
+    size_t start = 0;
+    while (start <= str.size())
     {
-        result.push_back(token);
+        size_t end = str.find(delimiter, start);
+        if (end == string_view::npos)
+        {
+            result.push_back(str.substr(start, str.size() - start));
+            break;
+        }
+        result.push_back(str.substr(start, end - start));
+        start = end + 1;
     }
     return result;
 }
 
-string trim(const string& s)
+string_view trim(const string_view& s)
 {
     auto start = s.find_first_not_of(" \t\r\n");
     auto end = s.find_last_not_of(" \t\r\n");
-    return (start == string::npos || end == string::npos) ? string() : s.substr(start, end - start + 1);
+    return (start == string_view::npos || end == string_view::npos) ? string_view() : s.substr(start, end - start + 1);
 }
 
-bool isNumber(const string& token)
+bool isNumber(const string_view& token)
 {
     if (token.empty()) return false;
     size_t start = 0;
@@ -117,13 +125,13 @@ bool isIdentifierChar(char c)
     return isalnum(static_cast<unsigned char>(c)) || c == '_';
 }
 
-bool isOperatorToken(const string& token)
+bool isOperatorToken(const string_view& token)
 {
-    static const vector<string> ops = { "+", "-", "*", "/", ">", "<", ">=", "<=", "==", "!=", "(", ")" };
+    static const vector<string_view> ops = { "+", "-", "*", "/", ">", "<", ">=", "<=", "==", "!=", "(", ")" };
     return find(ops.begin(), ops.end(), token) != ops.end();
 }
 
-int getPrecedence(const string& op)
+int getPrecedence(const string_view& op)
 {
     if (op == "*" || op == "/") return 3;
     if (op == "+" || op == "-") return 2;
@@ -131,10 +139,10 @@ int getPrecedence(const string& op)
     return 0;
 }
 
-vector<string> tokenizeExpression(const string& expr)
+vector<string_view> tokenizeExpression(const string_view& expr)
 {
-    vector<string> tokens;
-    string current;
+    vector<string_view> tokens;
+    string_view current;
     size_t i = 0;
     while (i < expr.size())
     {
@@ -146,71 +154,61 @@ vector<string> tokenizeExpression(const string& expr)
         }
         if (c == '"')
         {
-            string literal;
-            literal.push_back(c);
+            size_t start = i;
             ++i;
             while (i < expr.size() && expr[i] != '"')
             {
-                literal.push_back(expr[i]);
                 ++i;
             }
             if (i < expr.size())
             {
-                literal.push_back('"');
                 ++i;
             }
-            tokens.push_back(literal);
-            current.clear();
+            tokens.push_back(expr.substr(start, i - start));
+            current = string_view();
             continue;
         }
         if (isdigit(static_cast<unsigned char>(c)) || ((c == '+' || c == '-') && i + 1 < expr.size() && isdigit(static_cast<unsigned char>(expr[i + 1])) && (i == 0 || expr[i - 1] == '(' || isOperatorToken(current))))
         {
-            string number;
-            number.push_back(c);
+            size_t start = i;
             ++i;
             while (i < expr.size() && isdigit(static_cast<unsigned char>(expr[i])))
             {
-                number.push_back(expr[i]);
                 ++i;
             }
-            tokens.push_back(number);
-            current.clear();
+            tokens.push_back(expr.substr(start, i - start));
+            current = string_view();
             continue;
         }
         if (isIdentifierChar(c))
         {
-            string ident;
-            ident.push_back(c);
+            size_t start = i;
             ++i;
             while (i < expr.size() && isIdentifierChar(expr[i]))
             {
-                ident.push_back(expr[i]);
                 ++i;
             }
-            tokens.push_back(ident);
-            current = ident;
+            tokens.push_back(expr.substr(start, i - start));
+            current = expr.substr(start, i - start);
             continue;
         }
         if (c == '>' || c == '<' || c == '=' || c == '!')
         {
-            string op;
-            op.push_back(c);
+            size_t start = i;
             if (i + 1 < expr.size() && expr[i + 1] == '=')
             {
-                op.push_back('=');
                 ++i;
             }
-            tokens.push_back(op);
+            tokens.push_back(expr.substr(start, i - start + 1));
             ++i;
-            current = op;
+            current = expr.substr(start, i - start);
             continue;
         }
         if (c == '+' || c == '-' || c == '*' || c == '/' || c == '(' || c == ')')
         {
-            string op(1, c);
-            tokens.push_back(op);
+            tokens.push_back(expr.substr(i, 1));
             ++i;
-            current = op;
+            current = expr.substr(i - 1, 1);
             continue;
         }
         ++i;
@@ -218,11 +216,11 @@ vector<string> tokenizeExpression(const string& expr)
     return tokens;
 }
 
-vector<string> infixToRPN(const vector<string>& tokens)
+vector<string_view> infixToRPN(const vector<string_view>& tokens)
 {
-    vector<string> out;
-    vector<string> ops;
-    for (const string& token : tokens)
+    vector<string_view> out;
+    vector<string_view> ops;
+    for (const string_view& token : tokens)
     {
         if (token.empty()) continue;
         if (isNumber(token) || (!isOperatorToken(token) && token != "(" && token != ")"))
@@ -260,14 +258,14 @@ vector<string> infixToRPN(const vector<string>& tokens)
     return out;
 }
 
-void compileRPN(const vector<string>& rpn, vector<Instruction>& bytecode)
+void compileRPN(const vector<string_view>& rpn, vector<Instruction>& bytecode)
 {
-    for (const string& token : rpn)
+    for (const string_view& token : rpn)
     {
         if (token.empty()) continue;
         if (isNumber(token))
         {
-            bytecode.emplace_back(OpCode::PUSH_INT, stoll(token));
+            bytecode.emplace_back(OpCode::PUSH_INT, stoll(string(token)));
         }
         else if (token == "+")
         {
@@ -311,14 +309,14 @@ void compileRPN(const vector<string>& rpn, vector<Instruction>& bytecode)
         }
         else
         {
-            bytecode.emplace_back(OpCode::LOAD_VAR, 0, token);
+            bytecode.emplace_back(OpCode::LOAD_VAR, 0, string(token));
         }
     }
 }
 
 void compileExpression(const string& expr, vector<Instruction>& bytecode)
 {
-    string source = trim(expr);
+    string_view source = trim(expr);
     if (source.empty())
     {
         bytecode.emplace_back(OpCode::PUSH_INT, 0);
@@ -326,17 +324,17 @@ void compileExpression(const string& expr, vector<Instruction>& bytecode)
     }
     if (source.size() >= 2 && source.front() == '"' && source.back() == '"')
     {
-        bytecode.emplace_back(OpCode::PUSH_STR, 0, source.substr(1, source.size() - 2));
+        bytecode.emplace_back(OpCode::PUSH_STR, 0, string(source.substr(1, source.size() - 2)));
         return;
     }
-    vector<string> tokens = tokenizeExpression(source);
-    vector<string> rpn = infixToRPN(tokens);
+    vector<string_view> tokens = tokenizeExpression(source);
+    vector<string_view> rpn = infixToRPN(tokens);
     compileRPN(rpn, bytecode);
 }
 
 void compilePrintArgument(const string& arg, vector<Instruction>& bytecode)
 {
-    string source = trim(arg);
+    string_view source = trim(arg);
     if (source == "endl")
     {
         bytecode.emplace_back(OpCode::PUSH_STR, 0, "\n");
@@ -344,19 +342,19 @@ void compilePrintArgument(const string& arg, vector<Instruction>& bytecode)
     }
     else if (source.size() >= 2 && source.front() == '"' && source.back() == '"')
     {
-        bytecode.emplace_back(OpCode::PUSH_STR, 0, source.substr(1, source.size() - 2));
+        bytecode.emplace_back(OpCode::PUSH_STR, 0, string(source.substr(1, source.size() - 2)));
         bytecode.emplace_back(OpCode::PRINT);
     }
     else
     {
-        compileExpression(source, bytecode);
+        compileExpression(string(source), bytecode);
         bytecode.emplace_back(OpCode::PRINT);
     }
 }
 
 void compileStatement(const string& line, vector<Instruction>& bytecode)
 {
-    string source = trim(line);
+    string_view source = trim(line);
     if (source.empty()) return;
 
     if (source.rfind("#import", 0) == 0)
@@ -366,7 +364,7 @@ void compileStatement(const string& line, vector<Instruction>& bytecode)
 
     if (source.rfind("return", 0) == 0 && (source.size() == 6 || isspace(static_cast<unsigned char>(source[6]))))
     {
-        string expr = trim(source.substr(6));
+        string expr = string(trim(source.substr(6)));
         if (!expr.empty())
         {
             compileExpression(expr, bytecode);
@@ -377,7 +375,7 @@ void compileStatement(const string& line, vector<Instruction>& bytecode)
 
     if (source.rfind("print ", 0) == 0)
     {
-        string arg = trim(source.substr(6));
+        string arg = string(trim(source.substr(6)));
         compilePrintArgument(arg, bytecode);
         return;
     }
@@ -387,19 +385,19 @@ void compileStatement(const string& line, vector<Instruction>& bytecode)
     {
         if (source.rfind(type + " ", 0) == 0)
         {
-            string remainder = trim(source.substr(type.size()));
+            string remainder = string(trim(source.substr(type.size())));
             size_t eqPos = remainder.find('=');
             string name;
             string initValue;
             if (eqPos != string::npos)
             {
-                name = trim(remainder.substr(0, eqPos));
-                initValue = trim(remainder.substr(eqPos + 1));
+                name = string(trim(remainder.substr(0, eqPos)));
+                initValue = string(trim(remainder.substr(eqPos + 1)));
             }
             else
             {
-                vector<string> parts = split(remainder, ' ');
-                if (!parts.empty()) name = parts[0];
+                vector<string_view> parts = split(remainder, ' ');
+                if (!parts.empty()) name = string(parts[0]);
                 initValue = "0";
             }
             if (!initValue.empty()) compileExpression(initValue, bytecode);
@@ -412,8 +410,8 @@ void compileStatement(const string& line, vector<Instruction>& bytecode)
     size_t eqPos = source.find('=');
     if (eqPos != string::npos && (eqPos + 1 >= source.size() || source[eqPos + 1] != '='))
     {
-        string name = trim(source.substr(0, eqPos));
-        string value = trim(source.substr(eqPos + 1));
+        string name = string(trim(source.substr(0, eqPos)));
+        string value = string(trim(source.substr(eqPos + 1)));
         compileExpression(value, bytecode);
         bytecode.emplace_back(OpCode::STORE_VAR, 0, name);
         return;
@@ -421,18 +419,18 @@ void compileStatement(const string& line, vector<Instruction>& bytecode)
 
     if (source.rfind("if ", 0) == 0)
     {
-        string remainder = trim(source.substr(3));
-        vector<string> tokens = split(remainder, ' ');
+        string remainder = string(trim(source.substr(3)));
+        vector<string_view> tokens = split(remainder, ' ');
         if (tokens.size() < 3) return;
-        string condition = tokens[0];
-        string action = tokens[1];
-        string arg = trim(remainder.substr(condition.size() + action.size() + 2));
+        string condition = string(tokens[0]);
+        string action = string(tokens[1]);
+        string arg = string(trim(remainder.substr(condition.size() + action.size() + 2)));
         string elsePart;
         size_t elsePos = arg.find(" else ");
         if (elsePos != string::npos)
         {
-            elsePart = trim(arg.substr(elsePos + 6));
-            arg = trim(arg.substr(0, elsePos));
+            elsePart = string(trim(arg.substr(elsePos + 6)));
+            arg = string(trim(arg.substr(0, elsePos)));
         }
         compileExpression(condition, bytecode);
         size_t jzIndex = bytecode.size();
@@ -454,7 +452,7 @@ void compileStatement(const string& line, vector<Instruction>& bytecode)
             if (elseSpace != string::npos)
             {
                 string elseAction = elsePart.substr(0, elseSpace);
-                string elseArg = trim(elsePart.substr(elseSpace + 1));
+                string elseArg = string(trim(elsePart.substr(elseSpace + 1)));
                 compileStatement(elseAction + " " + elseArg, bytecode);
             }
         }
@@ -462,7 +460,7 @@ void compileStatement(const string& line, vector<Instruction>& bytecode)
         return;
     }
 
-    compileExpression(source, bytecode);
+    compileExpression(string(source), bytecode);
     bytecode.emplace_back(OpCode::PRINT);
 }
 
@@ -690,19 +688,30 @@ int main(int argc, char* argv[])
     GetModuleFileNameA(NULL, exeFullPath, MAX_PATH);
     string exepath(exeFullPath);
 
-    runCommand("assoc .cl=LizardFile");
-    runCommand(string("ftype LizardFile=\"") + exepath + "\" \"%1\"");
+    // 在main开头参数判断位置插入
+    if (argc >= 2 && string(argv[1]) == "--register") {
+        char exeFullPath[MAX_PATH];
+        GetModuleFileNameA(NULL, exeFullPath, MAX_PATH);
+        string exepath(exeFullPath);
+        runCommand("assoc .cl=LizardFile");
+        string shell = "ftype LizardFile=\"" + exepath + "\" \"%1\"";
+        runCommand(shell);
+        return 0;
+    }
+
 
     string path(argv[1]);
     vector<string> lines = ReadFileFromPath(path);
     if (lines.empty()) return 0;
 
-    clock_t start = clock(); // 程序开始计时
+    LARGE_INTEGER freq, start, end;
+    QueryPerformanceFrequency(&freq);
+    QueryPerformanceCounter(&start);
 
     vector<Instruction> bytecode;
     for (const string& rawLine : lines)
     {
-        string line = trim(rawLine);
+        string line = string(trim(rawLine));
         if (line.empty()) continue;
         compileStatement(line, bytecode);
     }
@@ -711,8 +720,8 @@ int main(int argc, char* argv[])
     VM vm;
     vm.execute(bytecode);
 
-    clock_t end = clock(); // 程序结束计时
-    double cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
+    QueryPerformanceCounter(&end);
+    double cpu_time_used = static_cast<double>(end.QuadPart - start.QuadPart) * 1000.0 / freq.QuadPart;
     int exitValue = 0;
     if (vm.hasReturn)
     {
@@ -720,7 +729,7 @@ int main(int argc, char* argv[])
     }
 
     cout << "-------------------------------" << endl;
-    cout << "Process exited after " << cpu_time_used << " seconds with return value " << exitValue << endl;
+    cout << "Process exited after " << fixed << setprecision(3) << cpu_time_used << " ms with return value " << exitValue << endl;
 
     system("pause"); //终止程序
 
