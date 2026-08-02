@@ -111,7 +111,7 @@ print "Hello, Lizard!"
 
 ## How to Run
 
-1. You can run the executable file directly in the folder and pass in a .cl script file
+1. You can run the executable file directly in the folder and pass in a .cl script file:
 
 ```bash
 Lizard.exe test.cl
