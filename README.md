@@ -111,8 +111,7 @@ print "Hello, Lizard!"
 
 ## How to Run
 
-1. Compile Lizard/Lizard/Lizard.cpp with a C++17-compatible compiler.
-2. Run the generated executable and pass a .cl script file as an argument:
+1. You can run the executable file directly in the folder and pass in a .cl script file
 
 ```bash
 Lizard.exe test.cl
