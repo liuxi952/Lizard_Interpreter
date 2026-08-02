@@ -66,7 +66,7 @@ Lizard.exe --register
 - 更完善的语法错误处理
 - 更丰富的控制流支持
 
-## 英文
+## English
 
 Lizard Interpreter is a lightweight C++-based scripting interpreter project designed to demonstrate the fundamental structure of an interpreter, including lexical analysis, expression parsing, bytecode generation, and virtual machine execution.
 
