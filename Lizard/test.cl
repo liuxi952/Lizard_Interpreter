@@ -1,3 +1,5 @@
-int a = 123
-int b = 456
-print a + b
+int i = 0
+while(i < 100000) {
+    i++
+}
+print i
